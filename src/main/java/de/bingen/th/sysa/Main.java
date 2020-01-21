@@ -76,7 +76,7 @@ public class Main {
         ArrayList<DataElement> returnList = new ArrayList();
         // TODO: create a more elegant way
         bufferedReader.lines().forEach(x -> {
-            DataElement e = new DataElement();
+            DataElement e = new DataElement(CLUSTER);
             // TODO: chaos
             ArrayList<Double> values = new ArrayList<>();
             Stream.of(x.split(" ")).forEach(v -> {

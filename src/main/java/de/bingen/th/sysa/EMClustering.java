@@ -1,6 +1,6 @@
 package de.bingen.th.sysa;
 
-import org.apache.commons.math3.distribution.MultivariateNormalDistribution;
+import de.bingen.th.sysa.model.Cluster;
 import org.apache.commons.math3.linear.*;
 
 import java.util.ArrayList;
@@ -13,66 +13,44 @@ public class EMClustering {
     private final int numData;
     // Number of clusters that should be approximated
     private final int numClusters;
-    // Number of different variables (dimension of x vector)
-    private final int numVariables;
+    // Number of different attributes (numAttributes-vector)
+    private final int numAttributes;
 
-    // Contains information about how much each point contributes to each cluster
-    private RealMatrix responsibility; // numData by numClusters Matrix
-    // Data points
+    // Data points with probability per cluster
     private ArrayList<DataElement> dataPoints; // array size = numData, vector size = numVariables
-    // Mean of each cluster
-    private ArrayList<RealVector> means; // array size = numClusters, vector size = numVariables
-    // Covariance matrix of each cluster
-    private ArrayList<RealMatrix> covariances; // array size = numClusters, matrix size = numVariables
-    // Probability that a random point in the given data is part of each cluster
-    private ArrayList<Double> probabilityForEachCluster;
+
+    // cluster with mean, whole probability and covariance matrix
+    private ArrayList<Cluster> clusters;
 
     public EMClustering(ArrayList<DataElement> inputList, int cluster) {
         this.numClusters = cluster;
         this.dataPoints = inputList;
         numData = inputList.size();
-        numVariables = inputList.get(0).getAttributes().getMaxIndex() + 1;
+        numAttributes = inputList.get(0).getAttributes().getMaxIndex() + 1;
 
-        responsibility = new Array2DRowRealMatrix(numData,numClusters);
-        means = new ArrayList<>();
-        covariances = new ArrayList<>();
+        this.clusters = new ArrayList<>();
 
-        probabilityForEachCluster = new ArrayList<>();
-
-        // Initialize probability for each cluster with a uniform probability
-        for(int c = 0; c < numClusters; ++c) {
-            probabilityForEachCluster.add(1.0 / numClusters);
-        }
-
-
+        // TODO: Comment
+        // Choose a random point as mean for each cluster
         // Generate random start point for each cluster
-
-        for(int i = 0; i < numClusters; ++i) {
-            // Choose a random point as mean for each cluster
-            means.add(new ArrayRealVector(dataPoints.get((int)(Math.random() * numData)).getAttributes()));
-
-            covariances.add(new Array2DRowRealMatrix(numVariables, numVariables));
-            // Choose random symmetrical matrix for covariances
-            for (int j = 0; j < numVariables; j++) {
-                for (int k = 0; k < numVariables; k++) {
-                    if (k < j) {
-                        covariances.get(i).setEntry(k,j,covariances.get(i).getEntry(j,k));
-                    } else {
-                        covariances.get(i).setEntry(k,j, Math.random() * 100);
-                    }
-                }
-            }
+        for (int i = 0; i < numClusters; ++i) {
+            Cluster c = new Cluster(
+                    new ArrayRealVector(dataPoints.get((int) (Math.random() * numData)).getAttributes()),
+                    numClusters,
+                    numAttributes);
+            clusters.add(c);
         }
 
     }
 
     public void procedure() {
         for (int step = 0; step < ITERATIONS; step++) {
-            // Expectation
-            for (int i = 0; i < numData; i++) {
+            // Expectation - determine probability for each dataPoint
+            for (DataElement dataPoint : dataPoints) {
                 for (int c = 0; c < numClusters; c++) {
-                    responsibility.setEntry(i,c,calculateReposibility(c,dataPoints.get(i)));
+                    dataPoint.getProbabilityPerCluster().set(c,calculateReposibility(c, dataPoint));
                 }
+
             }
 
             // Maximization
@@ -81,38 +59,40 @@ public class EMClustering {
                 // Accumulating how much each cluster is "responsible" for the data seen. Basically giving each cluster its combined weight
                 responsibilityForEachCluster.add(0.0);
                 for (int i = 0; i < numData; i++) {
-                    responsibilityForEachCluster.set(c, responsibilityForEachCluster.get(c) + responsibility.getEntry(i,c));
+                    responsibilityForEachCluster.set(c,
+                            responsibilityForEachCluster.get(c) + dataPoints.get(i).getProbabilityPerCluster().get(c));
                 }
                 // Normalizing the responsibility resulting in an updated probability for each cluster between 0 and 1
-                probabilityForEachCluster.set(c,responsibilityForEachCluster.get(c) / numData);
+                clusters.get(c).setProbability(responsibilityForEachCluster.get(c) / numData);
 
                 // Calculating new mean for each cluster
-                ArrayRealVector sumVec = new ArrayRealVector(numVariables);
+                ArrayRealVector sumVec = new ArrayRealVector(numAttributes);
                 for (int i = 0; i < numData; i++) {
-                    sumVec = sumVec.add(dataPoints.get(i).getAttributes().mapMultiply(responsibility.getEntry(i,c)));
+                    sumVec = sumVec
+                            .add(dataPoints.get(i).getAttributes().mapMultiply(dataPoints.get(i).getProbabilityPerCluster().get(c)));
                 }
-                means.set(c, sumVec.mapMultiplyToSelf(1/responsibilityForEachCluster.get(c)));
+                clusters.get(c).setMean(sumVec.mapMultiplyToSelf(1 / responsibilityForEachCluster.get(c)));
 
                 // Recalculate covariance matrix for each cluster
-                RealMatrix sumMat = new Array2DRowRealMatrix(numClusters, numVariables);
+                RealMatrix sumMat = new Array2DRowRealMatrix(numClusters, numAttributes);
                 for (int i = 0; i < numData; i++) {
-                    RealVector diff = dataPoints.get(i).getAttributes().subtract(means.get(c));
-                    sumMat = sumMat.add(diff.outerProduct(diff).scalarMultiply(responsibility.getEntry(i,c)));
+                    RealVector diff = dataPoints.get(i).getAttributes().subtract(clusters.get(c).getMean());
+                    sumMat = sumMat.add(diff.outerProduct(diff).scalarMultiply(dataPoints.get(i).getProbabilityPerCluster().get(c)));
                 }
-                covariances.set(c,sumMat.scalarMultiply(1/responsibilityForEachCluster.get(c)));
+                clusters.get(c).setCovariance(sumMat.scalarMultiply(1 / responsibilityForEachCluster.get(c)));
             }
         }
     }
 
     public RealMatrix getCovarianceAtIndex(int index) {
-        return covariances.get(index);
+        return clusters.get(index).getCovariance();
     }
 
     private double calculateReposibility(int c, DataElement dataElement) {
         double numerator, denominator = 0;
-        numerator = multivariateGaussian(dataElement.getAttributes(), means.get(c), covariances.get(c)) * probabilityForEachCluster.get(c);
-        for(int i = 0; i < numClusters; i++) {
-            denominator += multivariateGaussian(dataElement.getAttributes(), means.get(i), covariances.get(i)) * probabilityForEachCluster.get(c);
+        numerator = multivariateGaussian(dataElement.getAttributes(), clusters.get(c).getMean(), clusters.get(c).getCovariance()) * clusters.get(c).getProbability();
+        for (int i = 0; i < numClusters; i++) {
+            denominator += multivariateGaussian(dataElement.getAttributes(), clusters.get(i).getMean(), clusters.get(i).getCovariance()) * clusters.get(c).getProbability();
         }
         return numerator / denominator;
 
@@ -129,8 +109,8 @@ public class EMClustering {
         RealVector vecTimesMat = inverse.preMultiply(diff);
         double dotProduct = vecTimesMat.dotProduct(diff);
         double exponent = dotProduct * (-0.5);
-        double determinant =  Math.abs(new LUDecomposition(covariance).getDeterminant());
-        double factorPow = Math.pow(2*Math.PI, x.getMaxIndex());
+        double determinant = Math.abs(new LUDecomposition(covariance).getDeterminant());
+        double factorPow = Math.pow(2 * Math.PI, x.getMaxIndex());
         double v2 = Math.sqrt(factorPow * determinant);
         return Math.exp(exponent) / v2;
 
