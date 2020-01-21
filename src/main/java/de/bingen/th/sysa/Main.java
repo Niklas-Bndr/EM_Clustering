@@ -1,82 +1,80 @@
 package de.bingen.th.sysa;
 
+import de.bingen.th.sysa.model.DataElement;
 import org.apache.commons.math3.linear.*;
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.stream.Stream;
 
+
+/**
+ * Main class to start the EM algorithm
+ */
 public class Main {
 
+    // configuration parameters
     private final static String INPUT_FILE = "inputData.dat";
     private final static String RESULT_FILE = "resultData.dat";
+    private final static int NUM_CLUSTER = 2;
+    private final static int ITERATIONS = 100;
 
-    private final static int CLUSTER = 2;
+    /**
+     * Start routine to calculate clusters using the EM algorithm
+     *
+     * @param args Not in use.
+     */
+    public static void main(String... args) {
+        ArrayList<DataElement> dataPoints = convertInputData();
+        if (dataPoints == null) {
+            System.out.println("ATTENTION: can't handle input file. \n " +
+                    "Please make sure, that the input file \"" + INPUT_FILE + "\" exists.");
+            return;
+        }
 
-
-    public static void main(String... args)  {
-        BufferedReader bufferedReader = checkAndGetInputfile(INPUT_FILE);
-        ArrayList<DataElement> inputList = convertInputData(bufferedReader);
-        EMClustering em = new EMClustering(inputList, CLUSTER);
+        EMClustering em = new EMClustering(ITERATIONS, NUM_CLUSTER, dataPoints);
         em.procedure();
 
         PrintWriter printWriter = null;
         try {
-             printWriter = new PrintWriter(new FileWriter(RESULT_FILE));
+            printWriter = new PrintWriter(new FileWriter(RESULT_FILE));
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        RealVector eigenValues = new ArrayRealVector();
-        RealMatrix eigenVectors = new Array2DRowRealMatrix();
-
-        for(int i = 0; i < CLUSTER; i++) {
+        for (int i = 0; i < NUM_CLUSTER; i++) {
             EigenDecomposition eD = new EigenDecomposition(em.getCovarianceAtIndex(i));
-
-            double[] test = eD.getRealEigenvalues();
-            double[] test2 = eD.getImagEigenvalues();
-
-
-            /*eigenValues = eD.getEigenvector(i);
-            eigenVectors = eD.
-            EigenPair eigenPair = emClustering.getCovarianceAtIndex(i).eigen();
-            eigenvalues = eigenPair.getEigenvalues();
-            eigenvectors = eigenPair.getEigenvectors();
-
-            int maxEvIndex = eigenvalues.getIndexOfMax();
-            int secondMaxEvIndex = eigenvalues.getIndexOfSecondMax();
-
-            double meanX = emClustering.getMeanAtIndex(i).get(0);
-            double meanY = emClustering.getMeanAtIndex(i).get(1);
-
-            double maxEv = eigenvalues.get(maxEvIndex);
-            double secondMaxEv = eigenvalues.get(secondMaxEvIndex);
-
-            Vec eigenvector = eigenvectors.getColumnVecOfIndex(maxEvIndex);
-
-            double angle = eigenvector.angleInDeg(new Vec(0, 1)); // angle to y axis
-
-            printWriter.println(meanX + " " + meanY + " " + maxEv + " " + secondMaxEv + " " + angle);*/
+            printWriter.println(i+1 + ". Cluster: ");
+            printWriter.println("- RealEigenValues: ");
+            for (double eigenValue: eD.getRealEigenvalues()) {
+                printWriter.println("  - " + eigenValue);
+            }
+            printWriter.println("- EigenVectors: ");
+            for (int j = 0; j < dataPoints.get(0).getAttributes().getMaxIndex() + 1; j++) {
+                printWriter.println("  - " + eD.getEigenvector(j));
+            }
+            printWriter.println("");
         }
-
         printWriter.close();
 
     }
 
-    private static BufferedReader checkAndGetInputfile(String file) {
-        try {
-            return new BufferedReader(new FileReader(new File(file)));
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
+    /**
+     * Read input file and convert it in an array of DataElements
+     *
+     * @return null -> something went wrong
+     * else: Array of DataElements (including Vector of double points)
+     */
+    private static ArrayList<DataElement> convertInputData() {
+        BufferedReader bufferedReader = checkAndGetInputfile(INPUT_FILE);
+        if (bufferedReader == null) {
+            return null;
         }
-        return null;
-    }
 
-    private static ArrayList convertInputData(BufferedReader bufferedReader) {
         ArrayList<DataElement> returnList = new ArrayList();
         // TODO: create a more elegant way
         bufferedReader.lines().forEach(x -> {
-            DataElement e = new DataElement(CLUSTER);
+            DataElement e = new DataElement(NUM_CLUSTER);
             // TODO: chaos
             ArrayList<Double> values = new ArrayList<>();
             Stream.of(x.split(" ")).forEach(v -> {
@@ -86,7 +84,7 @@ public class Main {
             });
 
             Double[] tmp = new Double[values.size()];
-            for (int i = 0; i<values.size();i++) {
+            for (int i = 0; i < values.size(); i++) {
                 tmp[i] = values.get(i);
             }
             e.setAttributes(new ArrayRealVector(tmp));
@@ -94,5 +92,20 @@ public class Main {
         });
 
         return returnList;
+    }
+
+    /**
+     * read given input file
+     *
+     * @param file input file - most inputData.dat
+     * @return Buffered Reader
+     */
+    private static BufferedReader checkAndGetInputfile(String file) {
+        try {
+            return new BufferedReader(new FileReader(new File(file)));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

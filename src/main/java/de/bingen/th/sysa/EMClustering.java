@@ -1,13 +1,14 @@
 package de.bingen.th.sysa;
 
 import de.bingen.th.sysa.model.Cluster;
+import de.bingen.th.sysa.model.DataElement;
 import org.apache.commons.math3.linear.*;
 
 import java.util.ArrayList;
 
 public class EMClustering {
 
-    private final static int ITERATIONS = 100;
+
 
     // Number of data points (length of x array)
     private final int numData;
@@ -15,6 +16,8 @@ public class EMClustering {
     private final int numClusters;
     // Number of different attributes (numAttributes-vector)
     private final int numAttributes;
+    // number of iterations
+    private final int iterations;
 
     // Data points with probability per cluster
     private ArrayList<DataElement> dataPoints; // array size = numData, vector size = numVariables
@@ -22,65 +25,76 @@ public class EMClustering {
     // cluster with mean, whole probability and covariance matrix
     private ArrayList<Cluster> clusters;
 
-    public EMClustering(ArrayList<DataElement> inputList, int cluster) {
+    public EMClustering(int iterations, int cluster, ArrayList<DataElement> dataPoints) {
+        this.iterations = iterations;
         this.numClusters = cluster;
-        this.dataPoints = inputList;
-        numData = inputList.size();
-        numAttributes = inputList.get(0).getAttributes().getMaxIndex() + 1;
+        this.dataPoints = dataPoints;
+        numData = dataPoints.size();
+        numAttributes = dataPoints.get(0).getAttributes().getMaxIndex() + 1;
 
-        this.clusters = new ArrayList<>();
+        clusters = new ArrayList<>();
 
         // TODO: Comment
         // Choose a random point as mean for each cluster
         // Generate random start point for each cluster
-        for (int i = 0; i < numClusters; ++i) {
+        for (int i = 0; i < numClusters; i++) {
             Cluster c = new Cluster(
                     new ArrayRealVector(dataPoints.get((int) (Math.random() * numData)).getAttributes()),
                     numClusters,
-                    numAttributes);
+                    numAttributes,
+                    i);
             clusters.add(c);
         }
 
     }
 
     public void procedure() {
-        for (int step = 0; step < ITERATIONS; step++) {
+        for (int step = 0; step < iterations; step++) {
             // Expectation - determine probability for each dataPoint
-            for (DataElement dataPoint : dataPoints) {
-                for (int c = 0; c < numClusters; c++) {
-                    dataPoint.getProbabilityPerCluster().set(c,calculateReposibility(c, dataPoint));
-                }
-
-            }
+            performExpectation();
 
             // Maximization
-            ArrayList<Double> responsibilityForEachCluster = new ArrayList<>();
+            performMaximization();
+        }
+    }
+
+    private void performExpectation() {
+        for (DataElement dataPoint : dataPoints) {
             for (int c = 0; c < numClusters; c++) {
-                // Accumulating how much each cluster is "responsible" for the data seen. Basically giving each cluster its combined weight
-                responsibilityForEachCluster.add(0.0);
-                for (int i = 0; i < numData; i++) {
-                    responsibilityForEachCluster.set(c,
-                            responsibilityForEachCluster.get(c) + dataPoints.get(i).getProbabilityPerCluster().get(c));
-                }
-                // Normalizing the responsibility resulting in an updated probability for each cluster between 0 and 1
-                clusters.get(c).setProbability(responsibilityForEachCluster.get(c) / numData);
+                dataPoint.getProbabilityPerCluster().set(c, calculateReposibility(c, dataPoint));
+            }
+        }
+    }
+
+    private void performMaximization() {
+        for (Cluster cluster : clusters) {
+            double clusterResponsibility = 0.0;
+            ArrayRealVector sumVector = new ArrayRealVector(numAttributes);
+            RealMatrix sumMatrix = new Array2DRowRealMatrix(numClusters, numAttributes);
+
+            for (DataElement dataPoint : dataPoints) {
+                // Accumulating how much the cluster is responsible for the data set.
+                // Basically giving each cluster its combined weight
+                clusterResponsibility += dataPoint.getProbabilityPerCluster().get(cluster.getIndex());
 
                 // Calculating new mean for each cluster
-                ArrayRealVector sumVec = new ArrayRealVector(numAttributes);
-                for (int i = 0; i < numData; i++) {
-                    sumVec = sumVec
-                            .add(dataPoints.get(i).getAttributes().mapMultiply(dataPoints.get(i).getProbabilityPerCluster().get(c)));
-                }
-                clusters.get(c).setMean(sumVec.mapMultiplyToSelf(1 / responsibilityForEachCluster.get(c)));
+                sumVector = sumVector
+                        .add(dataPoint.getAttributes().mapMultiply(dataPoint.getProbabilityPerCluster().get(cluster.getIndex())));
 
                 // Recalculate covariance matrix for each cluster
-                RealMatrix sumMat = new Array2DRowRealMatrix(numClusters, numAttributes);
-                for (int i = 0; i < numData; i++) {
-                    RealVector diff = dataPoints.get(i).getAttributes().subtract(clusters.get(c).getMean());
-                    sumMat = sumMat.add(diff.outerProduct(diff).scalarMultiply(dataPoints.get(i).getProbabilityPerCluster().get(c)));
-                }
-                clusters.get(c).setCovariance(sumMat.scalarMultiply(1 / responsibilityForEachCluster.get(c)));
+                RealVector diff = dataPoint.getAttributes().subtract(clusters.get(cluster.getIndex()).getMean());
+                sumMatrix = sumMatrix
+                        .add(diff.outerProduct(diff).scalarMultiply(dataPoint.getProbabilityPerCluster().get(cluster.getIndex())));
+
             }
+            // set probability by normalizing the responsibility for each cluster (0-1)
+            cluster.setProbability(clusterResponsibility / numData);
+
+            // set new mean for each cluster
+            cluster.setMean(sumVector.mapMultiplyToSelf(1 / clusterResponsibility));
+
+            // Set new covariance matrix for given cluster
+            cluster.setCovariance(sumMatrix.scalarMultiply(1 / clusterResponsibility));
         }
     }
 

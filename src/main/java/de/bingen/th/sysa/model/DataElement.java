@@ -1,4 +1,4 @@
-package de.bingen.th.sysa;
+package de.bingen.th.sysa.model;
 
 import lombok.Data;
 import org.apache.commons.math3.linear.ArrayRealVector;

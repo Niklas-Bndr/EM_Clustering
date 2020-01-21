@@ -16,9 +16,13 @@ public class Cluster {
     // Probability that a random point in the given data is part of each cluster
     private double probability;
 
-    public Cluster(RealVector mean, int numCluster, int numAttributes){
+    // index of the cluster
+    private final int index;
+
+    public Cluster(RealVector mean, int numCluster, int numAttributes, int index){
         this.mean = mean;
         this.probability = 1.0 / numCluster;
+        this.index = index;
 
         // create a random symmetric matrix for the covariance
         this.covariance = new Array2DRowRealMatrix(numAttributes, numAttributes);
