@@ -17,7 +17,7 @@ public class EMClustering {
     // number of iterations
     private final int iterations;
 
-    // Data points with probability per cluster
+    // data points with responsibility per cluster
     private ArrayList<DataPoint> dataPoints; // array size = numData, vector size = numVariables
 
     // cluster with mean, whole probability and covariance matrix
@@ -48,7 +48,7 @@ public class EMClustering {
 
     public void procedure() {
         for (int step = 0; step < iterations; step++) {
-            // Expectation - determine probability for each dataPoint
+            // Expectation - determine responsibility for each dataPoint
             performExpectation();
 
             // Maximization
@@ -105,24 +105,24 @@ public class EMClustering {
         }
         for (Cluster cluster: clusters) {
             double numerator = multivariateGaussian(dataPoint.getAttributes(), cluster.getMean(), cluster.getCovariance()) * cluster.getProbability();
-            double probabilityPerCluster = numerator / (denominator * cluster.getProbability());
-            dataPoint.getResponsibilityPerCluster().set(cluster.getIndex(), probabilityPerCluster);
+            double responsibilityPerCluster = numerator / (denominator * cluster.getProbability());
+            dataPoint.getResponsibilityPerCluster().set(cluster.getIndex(), responsibilityPerCluster);
         }
     }
 
-    private double multivariateGaussian(RealVector x, RealVector mean, RealMatrix covariance) {
+    private double multivariateGaussian(RealVector attributes, RealVector mean, RealMatrix covariance) {
         /*double[] mean_data = mean.toArray();
         double[][] covariance_data = covariance.getData();
         MultivariateNormalDistribution bal = new MultivariateNormalDistribution(mean_data, covariance_data);
-        double test = bal.density(x.toArray());*/
+        double test = bal.density(attributes.toArray());*/
         // Calculated in steps so it's easier to check with breakpoints for errors
-        RealVector diff = x.subtract(mean);
+        RealVector diff = attributes.subtract(mean);
         RealMatrix inverse = new LUDecomposition(covariance).getSolver().getInverse();
         RealVector vecTimesMat = inverse.preMultiply(diff);
         double dotProduct = vecTimesMat.dotProduct(diff);
         double exponent = dotProduct * (-0.5);
         double determinant = Math.abs(new LUDecomposition(covariance).getDeterminant());
-        double factorPow = Math.pow(2 * Math.PI, x.getMaxIndex());
+        double factorPow = Math.pow(2 * Math.PI, attributes.getMaxIndex());
         double v2 = Math.sqrt(factorPow * determinant);
         return Math.exp(exponent) / v2;
 
