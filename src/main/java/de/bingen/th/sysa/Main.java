@@ -1,6 +1,6 @@
 package de.bingen.th.sysa;
 
-import de.bingen.th.sysa.model.DataElement;
+import de.bingen.th.sysa.model.DataPoint;
 import org.apache.commons.math3.linear.*;
 
 import java.io.*;
@@ -25,7 +25,7 @@ public class Main {
      * @param args Not in use.
      */
     public static void main(String... args) {
-        ArrayList<DataElement> dataPoints = convertInputData();
+        ArrayList<DataPoint> dataPoints = convertInputData();
         if (dataPoints == null) {
             System.out.println("ATTENTION: can't handle input file. \n " +
                     "Please make sure, that the input file \"" + INPUT_FILE + "\" exists.");
@@ -65,16 +65,16 @@ public class Main {
      * @return null -> something went wrong
      * else: Array of DataElements (including Vector of double points)
      */
-    private static ArrayList<DataElement> convertInputData() {
+    private static ArrayList<DataPoint> convertInputData() {
         BufferedReader bufferedReader = checkAndGetInputfile(INPUT_FILE);
         if (bufferedReader == null) {
             return null;
         }
 
-        ArrayList<DataElement> returnList = new ArrayList();
+        ArrayList<DataPoint> returnList = new ArrayList();
         // TODO: create a more elegant way
         bufferedReader.lines().forEach(x -> {
-            DataElement e = new DataElement(NUM_CLUSTER);
+            DataPoint e = new DataPoint(NUM_CLUSTER);
             // TODO: chaos
             ArrayList<Double> values = new ArrayList<>();
             Stream.of(x.split(" ")).forEach(v -> {
