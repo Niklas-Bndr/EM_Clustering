@@ -71,16 +71,16 @@ public class EMClustering {
             for (DataPoint dataPoint : dataPoints) {
                 // Accumulating how much the cluster is responsible for the data set.
                 // Basically giving each cluster its combined weight
-                clusterResponsibility += dataPoint.getResponsibilityPerCluster().get(cluster.getIndex());
+                clusterResponsibility += dataPoint.getResponsibilityPerCluster(cluster);
 
                 // Calculating new mean for each cluster
                 sumVector = sumVector
-                        .add(dataPoint.getAttributes().mapMultiply(dataPoint.getResponsibilityPerCluster().get(cluster.getIndex())));
+                        .add(dataPoint.getAttributes().mapMultiply(dataPoint.getResponsibilityPerCluster(cluster)));
 
                 // Recalculate covariance matrix for each cluster
                 RealVector diff = dataPoint.getAttributes().subtract(clusters.get(cluster.getIndex()).getMean());
                 sumMatrix = sumMatrix
-                        .add(diff.outerProduct(diff).scalarMultiply(dataPoint.getResponsibilityPerCluster().get(cluster.getIndex())));
+                        .add(diff.outerProduct(diff).scalarMultiply(dataPoint.getResponsibilityPerCluster(cluster)));
 
             }
             // set probability by normalizing the responsibility for each cluster (0-1)

@@ -21,4 +21,8 @@ public class DataPoint {
         }
     }
 
+    public Double getResponsibilityPerCluster(Cluster cluster) {
+        return getResponsibilityPerCluster().get(cluster.getIndex());
+    }
+
 }
