@@ -1,10 +1,13 @@
 package de.bingen.th.sysa;
 
+import de.bingen.th.sysa.model.Cluster;
 import de.bingen.th.sysa.model.DataPoint;
 import org.apache.commons.math3.linear.*;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 
@@ -14,10 +17,11 @@ import java.util.stream.Stream;
 public class Main {
 
     // configuration parameters
-    private final static String INPUT_FILE = "inputData.dat";
-    private final static String RESULT_FILE = "resultData.dat";
+    private final static String INPUT_FILE = "inputData2.dat";
+    private final static String RESULT_FILE = "resultData2.dat";
+    private final static String RESULT_FILE_FORMATED = "resultData2_formated.dat";
     private final static int NUM_CLUSTER = 2;
-    private final static int ITERATIONS = 100;
+    private final static int ITERATIONS = 500;
 
     /**
      * Start routine to calculate clusters using the EM algorithm
@@ -37,18 +41,36 @@ public class Main {
 
         PrintWriter printWriter = null;
         try {
-            printWriter = new PrintWriter(new FileWriter(RESULT_FILE));
+            printWriter = new PrintWriter(new FileWriter(RESULT_FILE_FORMATED));
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        for (int i = 0; i < NUM_CLUSTER; i++) {
-            EigenDecomposition eD = new EigenDecomposition(em.getCovarianceAtIndex(i));
-            printWriter.println(i+1 + ". Cluster: ");
+        for (Cluster cluster: em.getClusters()) {
+            EigenDecomposition eD = new EigenDecomposition(cluster.getCovariance());
+            printWriter.println(cluster.getIndex()+1 + ". Cluster: ");
+            printWriter.println("- Mean: ");
+            for (double mean: cluster.getMean().toArray()) {
+                printWriter.println("  - " + mean);
+            }
             printWriter.println("- RealEigenValues: ");
             for (double eigenValue: eD.getRealEigenvalues()) {
                 printWriter.println("  - " + eigenValue);
             }
+            // Get index of max Eigenvalue
+            int index = IntStream.range(0, eD.getRealEigenvalues().length)
+                        .reduce((i, j) -> eD.getRealEigenvalue(i) > eD.getRealEigenvalue(j) ? i : j)
+                        .getAsInt();
+            RealVector vector = eD.getEigenvector(index);
+            /*double acosValue = vector.getEntry(1) / getMagnitude(vector) / 1;
+            double toDegressValue = Math.acos(acosValue);
+            double angle = Math.toDegrees(toDegressValue);*/
+            //double angle = Math.toDegrees((Math.acos(-1*(vector.getEntry(1) / getMagnitude(vector) / 1))));
+            double angle =0.0;
+            if (vector.getDimension() > 1 ) {
+                angle = Math.toDegrees((Math.acos((vector.getEntry(1) / getMagnitude(vector) / 1))));
+            }
+            printWriter.println("- AngleDegree: " + angle);
             printWriter.println("- EigenVectors: ");
             for (int j = 0; j < dataPoints.get(0).getAttributes().getMaxIndex() + 1; j++) {
                 printWriter.println("  - " + eD.getEigenvector(j));
@@ -57,6 +79,41 @@ public class Main {
         }
         printWriter.close();
 
+        try {
+            printWriter = new PrintWriter(new FileWriter(RESULT_FILE));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        for (Cluster cluster: em.getClusters()) {
+            EigenDecomposition eD = new EigenDecomposition(cluster.getCovariance());
+            for (double mean: cluster.getMean().toArray()) {
+                printWriter.print(" " + mean);
+            }
+            for (double eigenValue: eD.getRealEigenvalues()) {
+                printWriter.print(" " + eigenValue);
+            }
+            // Get index of max Eigenvalue
+            int index = IntStream.range(0, eD.getRealEigenvalues().length)
+                    .reduce((i, j) -> eD.getRealEigenvalue(i) > eD.getRealEigenvalue(j) ? i : j)
+                    .getAsInt();
+            RealVector vector = eD.getEigenvector(index);
+            double angle =0.0;
+            if (vector.getDimension() > 1 ) {
+                angle = Math.toDegrees((Math.acos((vector.getEntry(1) / getMagnitude(vector) / 1))));
+            }
+            printWriter.println(" " + angle);
+        }
+        printWriter.close();
+
+    }
+
+    private static double getMagnitude(RealVector vector) {
+        double sumQuadrats = 0;
+        for (double value: vector.toArray()) {
+            sumQuadrats += value*value;
+        }
+        return Math.sqrt(sumQuadrats);
     }
 
     /**

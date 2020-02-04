@@ -6,6 +6,9 @@ import org.apache.commons.math3.linear.*;
 
 import java.util.ArrayList;
 
+/**
+ *
+ */
 public class EMClustering {
 
     // number of data points
@@ -23,12 +26,18 @@ public class EMClustering {
     // cluster with mean, whole probability and covariance matrix
     private ArrayList<Cluster> clusters;
 
+    /**
+     *
+     * @param iterations
+     * @param cluster
+     * @param dataPoints
+     */
     public EMClustering(int iterations, int cluster, ArrayList<DataPoint> dataPoints) {
         this.iterations = iterations;
         this.noClusters = cluster;
         this.dataPoints = dataPoints;
         noData = dataPoints.size();
-        noAttributes = dataPoints.get(0).getAttributes().getMaxIndex() + 1;
+        noAttributes = dataPoints.get(0).getAttributes().getDimension();
 
         clusters = new ArrayList<>();
 
@@ -46,6 +55,9 @@ public class EMClustering {
 
     }
 
+    /**
+     *
+     */
     public void procedure() {
         for (int step = 0; step < iterations; step++) {
             // Expectation - determine responsibility for each dataPoint
@@ -56,18 +68,23 @@ public class EMClustering {
         }
     }
 
+    /**
+     *
+     */
     private void performExpectation() {
         for (DataPoint dataPoint : dataPoints) {
             calculateResponsibility(dataPoint);
         }
     }
 
+    /**
+     *
+     */
     private void performMaximization() {
         for (Cluster cluster : clusters) {
             double clusterResponsibility = 0.0;
             ArrayRealVector sumVector = new ArrayRealVector(noAttributes);
-            RealMatrix sumMatrix = new Array2DRowRealMatrix(noClusters, noAttributes);
-
+            RealMatrix sumMatrix = new Array2DRowRealMatrix(noAttributes, noAttributes);
             for (DataPoint dataPoint : dataPoints) {
                 // Accumulating how much the cluster is responsible for the data set.
                 // Basically giving each cluster its combined weight
@@ -94,40 +111,62 @@ public class EMClustering {
         }
     }
 
-    public RealMatrix getCovarianceAtIndex(int index) {
-        return clusters.get(index).getCovariance();
-    }
-
+    /**
+     *
+     * @param dataPoint
+     */
     private void calculateResponsibility(DataPoint dataPoint) {
         double denominator = 0.0;
         for (Cluster cluster: clusters) {
-            denominator += multivariateGaussian(dataPoint.getAttributes(), cluster.getMean(), cluster.getCovariance());
+            denominator += multivariateGaussianDensity(dataPoint.getAttributes(), cluster.getMean(), cluster.getCovariance()) * cluster.getProbability();
         }
         for (Cluster cluster: clusters) {
-            double numerator = multivariateGaussian(dataPoint.getAttributes(), cluster.getMean(), cluster.getCovariance()) * cluster.getProbability();
-            double responsibilityPerCluster = numerator / (denominator * cluster.getProbability());
+            double numerator = multivariateGaussianDensity(dataPoint.getAttributes(), cluster.getMean(), cluster.getCovariance()) * cluster.getProbability();
+            double responsibilityPerCluster = numerator / denominator;
             dataPoint.getResponsibilityPerCluster().set(cluster.getIndex(), responsibilityPerCluster);
         }
     }
 
-    private double multivariateGaussian(RealVector attributes, RealVector mean, RealMatrix covariance) {
-        /*double[] mean_data = mean.toArray();
+    /**
+     *
+     * @param attributes
+     * @param mean
+     * @param covariance
+     * @return
+     */
+    /* formel from https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Density_function */
+    private double multivariateGaussianDensity(RealVector attributes, RealVector mean, RealMatrix covariance) {
+        /* Seems not to work, so we calculate the density manually:
+        double[] mean_data = mean.toArray();
         double[][] covariance_data = covariance.getData();
-        MultivariateNormalDistribution bal = new MultivariateNormalDistribution(mean_data, covariance_data);
-        double test = bal.density(attributes.toArray());*/
-        // Calculated in steps so it's easier to check with breakpoints for errors
+        MultivariateNormalDistribution mnd = new MultivariateNormalDistribution(mean_data, covariance_data);
+        double test = mnd.density(attributes.toArray()); */
+
+        /* if only one dimension/attribute exists, use https://en.wikipedia.org/wiki/Probability_density_function#Families_of_densities */
+        if (noAttributes == 1) {
+            double front = 1.0 / Math.sqrt(2 * Math.PI * covariance.getEntry(0,0));
+            double exp = Math.exp(-(Math.pow(attributes.getEntry(0)-mean.getEntry(0),2)/(2*covariance.getEntry(0,0))));
+            return front * exp;
+        }
+
+        /* numerator */
         RealVector diff = attributes.subtract(mean);
-        RealMatrix inverse = new LUDecomposition(covariance).getSolver().getInverse();
-        RealVector vecTimesMat = inverse.preMultiply(diff);
+        RealMatrix inverseCovariance = new LUDecomposition(covariance).getSolver().getInverse();
+        RealVector vecTimesMat = inverseCovariance.preMultiply(diff);
         double dotProduct = vecTimesMat.dotProduct(diff);
-        double exponent = dotProduct * (-0.5);
+        double exp = (-0.5) * dotProduct;
+        /* denominator */
         double determinant = Math.abs(new LUDecomposition(covariance).getDeterminant());
-        double factorPow = Math.pow(2 * Math.PI, attributes.getMaxIndex());
-        double v2 = Math.sqrt(factorPow * determinant);
-        return Math.exp(exponent) / v2;
-
-
+        double factorPow = Math.pow(2 * Math.PI, noAttributes);
+        double denominator = Math.sqrt(factorPow * determinant);
+        return Math.exp(exp) / denominator;
     }
 
-
+    /**
+     *
+     * @return
+     */
+    public ArrayList<Cluster> getClusters() {
+        return clusters;
+    }
 }

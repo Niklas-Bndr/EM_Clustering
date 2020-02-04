@@ -6,13 +6,19 @@ import org.apache.commons.math3.linear.RealVector;
 
 import java.util.ArrayList;
 
+/**
+ *
+ */
 @Data
 public class DataPoint {
     private RealVector attributes;
-
     // Contains information about how much the point contributes to each cluster
     private ArrayList<Double> responsibilityPerCluster;
 
+    /**
+     *
+     * @param numCluster
+     */
     public DataPoint(int numCluster) {
         this.attributes = new ArrayRealVector();
         this.responsibilityPerCluster = new ArrayList<>();
@@ -21,6 +27,11 @@ public class DataPoint {
         }
     }
 
+    /**
+     *
+     * @param cluster
+     * @return
+     */
     public Double getResponsibilityPerCluster(Cluster cluster) {
         return getResponsibilityPerCluster().get(cluster.getIndex());
     }
