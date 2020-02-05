@@ -6,28 +6,25 @@ import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.linear.RealVector;
 
 /**
- *
+ * Cluster: calculated cluster of data points with mean, covariance and probability
  */
 @Data
 public class Cluster {
-
-    // Mean of each cluster
-    private RealVector mean; // array size = numClusters, vector size = numVariables
-    // Covariance matrix of each cluster
-    private RealMatrix covariance; // array size = numClusters, matrix size = numVariables
-    // TODO:
-    // Probability that a random point in the given data is part of each cluster
+    // calculated mean of the cluster
+    private RealVector mean;
+    // covariance matrix of the cluster
+    private RealMatrix covariance;
+    // probability of the responsibility to all data points proportional to all clusters
     private double probability;
-
     // index of the cluster
     private final int index;
 
     /**
-     *
-     * @param mean
-     * @param numCluster
-     * @param numAttributes
-     * @param index
+     * Constructor
+     * @param mean random mean given from a data point
+     * @param numCluster number of clusters to calculate the start probability
+     * @param numAttributes number of attributes, necessary to initialize the covariance matrix
+     * @param index fix index position for responsibilityPerCluster information in dataPoint
      */
     public Cluster(RealVector mean, int numCluster, int numAttributes, int index){
         this.mean = mean;
@@ -36,10 +33,10 @@ public class Cluster {
 
         // create a random symmetric matrix for the covariance
         this.covariance = new Array2DRowRealMatrix(numAttributes, numAttributes);
+        // only necessary on more dimensional data points
         if (numAttributes == 1) {
             this.covariance.setEntry(0,0, Math.random() * 10);
         } else {
-            // create a random symmetric matrix for the covariance
             for (int i = 0; i < numAttributes; i++) {
                 for (int j = 0; j < numAttributes; j++) {
                     if (j > i) {

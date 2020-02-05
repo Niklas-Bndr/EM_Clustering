@@ -17,15 +17,20 @@ import java.util.stream.Stream;
 public class Main {
 
     // configuration parameters
-    private final static String INPUT_FILE = "inputData2.dat";
-    private final static String RESULT_FILE = "resultData2.dat";
-    private final static String RESULT_FILE_FORMATED = "resultData2_formated.dat";
+    private final static String INPUT_FILE = "inputMouse.dat";
+    private final static String RESULT_FILE = "resultMouse.dat";
+    private final static String RESULT_FILE_FORMATED = "resultMouse_formated.dat";
+    private final static int NUM_CLUSTER = 3;
+    /*
+    private final static String INPUT_FILE = "inputFaithful.dat";
+    private final static String RESULT_FILE = "resultFaithful.dat";
+    private final static String RESULT_FILE_FORMATED = "resultFaithful_formated.dat";
     private final static int NUM_CLUSTER = 2;
+    */
     private final static int ITERATIONS = 500;
 
     /**
      * Start routine to calculate clusters using the EM algorithm
-     *
      * @param args Not in use.
      */
     public static void main(String... args) {
@@ -40,74 +45,54 @@ public class Main {
         em.procedure();
 
         PrintWriter printWriter = null;
+        PrintWriter printWriterFormated = null;
         try {
-            printWriter = new PrintWriter(new FileWriter(RESULT_FILE_FORMATED));
+            printWriter = new PrintWriter(new FileWriter(RESULT_FILE));
+            printWriterFormated = new PrintWriter(new FileWriter(RESULT_FILE_FORMATED));
         } catch (IOException e) {
             e.printStackTrace();
         }
 
         for (Cluster cluster: em.getClusters()) {
             EigenDecomposition eD = new EigenDecomposition(cluster.getCovariance());
-            printWriter.println(cluster.getIndex()+1 + ". Cluster: ");
-            printWriter.println("- Mean: ");
+            printWriterFormated.println(cluster.getIndex()+1 + ". Cluster: ");
+            printWriterFormated.println("- Mean: ");
             for (double mean: cluster.getMean().toArray()) {
-                printWriter.println("  - " + mean);
+                printWriter.print(" " + mean);
+                printWriterFormated.println("  - " + mean);
             }
-            printWriter.println("- RealEigenValues: ");
+            printWriterFormated.println("- RealEigenValues: ");
             for (double eigenValue: eD.getRealEigenvalues()) {
-                printWriter.println("  - " + eigenValue);
+                printWriter.print(" " + 2 * Math.sqrt(4.605 * eigenValue));
+                printWriterFormated.println("  - " + eigenValue);
             }
             // Get index of max Eigenvalue
             int index = IntStream.range(0, eD.getRealEigenvalues().length)
                         .reduce((i, j) -> eD.getRealEigenvalue(i) > eD.getRealEigenvalue(j) ? i : j)
                         .getAsInt();
             RealVector vector = eD.getEigenvector(index);
-            /*double acosValue = vector.getEntry(1) / getMagnitude(vector) / 1;
-            double toDegressValue = Math.acos(acosValue);
-            double angle = Math.toDegrees(toDegressValue);*/
-            //double angle = Math.toDegrees((Math.acos(-1*(vector.getEntry(1) / getMagnitude(vector) / 1))));
             double angle =0.0;
-            if (vector.getDimension() > 1 ) {
-                angle = Math.toDegrees((Math.acos((vector.getEntry(1) / getMagnitude(vector) / 1))));
-            }
-            printWriter.println("- AngleDegree: " + angle);
-            printWriter.println("- EigenVectors: ");
-            for (int j = 0; j < dataPoints.get(0).getAttributes().getMaxIndex() + 1; j++) {
-                printWriter.println("  - " + eD.getEigenvector(j));
-            }
-            printWriter.println("");
-        }
-        printWriter.close();
-
-        try {
-            printWriter = new PrintWriter(new FileWriter(RESULT_FILE));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        for (Cluster cluster: em.getClusters()) {
-            EigenDecomposition eD = new EigenDecomposition(cluster.getCovariance());
-            for (double mean: cluster.getMean().toArray()) {
-                printWriter.print(" " + mean);
-            }
-            for (double eigenValue: eD.getRealEigenvalues()) {
-                printWriter.print(" " + eigenValue);
-            }
-            // Get index of max Eigenvalue
-            int index = IntStream.range(0, eD.getRealEigenvalues().length)
-                    .reduce((i, j) -> eD.getRealEigenvalue(i) > eD.getRealEigenvalue(j) ? i : j)
-                    .getAsInt();
-            RealVector vector = eD.getEigenvector(index);
-            double angle =0.0;
+            // Only calculate angle on more than one dimensions
             if (vector.getDimension() > 1 ) {
                 angle = Math.toDegrees((Math.acos((vector.getEntry(1) / getMagnitude(vector) / 1))));
             }
             printWriter.println(" " + angle);
+            printWriterFormated.println("- AngleDegree: " + angle);
+            printWriterFormated.println("- EigenVectors: ");
+            for (int j = 0; j < dataPoints.get(0).getAttributes().getMaxIndex() + 1; j++) {
+                printWriterFormated.println("  - " + eD.getEigenvector(j));
+            }
+            printWriterFormated.println("");
         }
         printWriter.close();
-
+        printWriterFormated.close();
     }
 
+    /**
+     * Helper Method to calculate the magnitude of a vector
+     * @param vector vector used to calculate magnitude
+     * @return magnitude
+     */
     private static double getMagnitude(RealVector vector) {
         double sumQuadrats = 0;
         for (double value: vector.toArray()) {
@@ -118,7 +103,6 @@ public class Main {
 
     /**
      * Read input file and convert it in an array of DataElements
-     *
      * @return null -> something went wrong
      * else: Array of DataElements (including Vector of double points)
      */
@@ -153,8 +137,7 @@ public class Main {
 
     /**
      * read given input file
-     *
-     * @param file input file - most inputData.dat
+     * @param file input file - most *.dat-file
      * @return Buffered Reader
      */
     private static BufferedReader checkAndGetInputfile(String file) {
