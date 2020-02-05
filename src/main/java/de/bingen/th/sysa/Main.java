@@ -113,22 +113,14 @@ public class Main {
         }
 
         ArrayList<DataPoint> returnList = new ArrayList();
-        // TODO: create a more elegant way
         bufferedReader.lines().forEach(x -> {
             DataPoint e = new DataPoint(NUM_CLUSTER);
-            // TODO: chaos
-            ArrayList<Double> values = new ArrayList<>();
             Stream.of(x.split(" ")).forEach(v -> {
                 if (!v.isEmpty()) {
-                    values.add(Double.parseDouble(v));
+                    // need to set the attributes, because append-method creates a new vector
+                    e.setAttributes(e.getAttributes().append(Double.parseDouble(v)));
                 }
             });
-
-            Double[] tmp = new Double[values.size()];
-            for (int i = 0; i < values.size(); i++) {
-                tmp[i] = values.get(i);
-            }
-            e.setAttributes(new ArrayRealVector(tmp));
             returnList.add(e);
         });
 
