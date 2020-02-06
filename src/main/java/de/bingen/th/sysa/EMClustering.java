@@ -79,17 +79,17 @@ public class EMClustering {
     private void calculateResponsibility(DataPoint dataPoint) {
         double denominator = 0.0;
         for (Cluster cluster: clusters) {
-            denominator += multivariateGaussianDensity(dataPoint.getAttributes(), cluster.getMean(), cluster.getCovariance()) * cluster.getProbability();
+            denominator += calculateGaussianDistribution(dataPoint.getAttributes(), cluster.getMean(), cluster.getCovariance()) * cluster.getProbability();
         }
         for (Cluster cluster: clusters) {
-            double numerator = multivariateGaussianDensity(dataPoint.getAttributes(), cluster.getMean(), cluster.getCovariance()) * cluster.getProbability();
+            double numerator = calculateGaussianDistribution(dataPoint.getAttributes(), cluster.getMean(), cluster.getCovariance()) * cluster.getProbability();
             dataPoint.getResponsibilityPerCluster().set(cluster.getIndex(), numerator / denominator);
         }
     }
 
     /**
      * Determine the density form a given vector (attributes) to an other vector (mean) of the cluster
-     * by using the multivariate gaussian distribution
+     * by using the (multivariate) gaussian distribution
      * used formel from:
      * * 1-dimension: https://en.wikipedia.org/wiki/Probability_density_function#Families_of_densities
      * * n-dimension: https://en.wikipedia.org/wiki/Multivariate_normal_distribution#Density_function
@@ -98,7 +98,7 @@ public class EMClustering {
      * @param covariance covariance of the cluster
      * @return density of distribution
      */
-    private double multivariateGaussianDensity(RealVector attributes, RealVector mean, RealMatrix covariance) {
+    private double calculateGaussianDistribution(RealVector attributes, RealVector mean, RealMatrix covariance) {
         /* Seems not to work, so we calculate the density manually:
         double[] mean_data = mean.toArray();
         double[][] covariance_data = covariance.getData();

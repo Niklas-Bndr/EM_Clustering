@@ -6,7 +6,6 @@ import org.apache.commons.math3.linear.*;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -17,16 +16,17 @@ import java.util.stream.Stream;
 public class Main {
 
     // configuration parameters
+    /*
     private final static String INPUT_FILE = "inputMouse.dat";
     private final static String RESULT_FILE = "resultMouse.dat";
     private final static String RESULT_FILE_FORMATED = "resultMouse_formated.dat";
     private final static int NUM_CLUSTER = 3;
-    /*
+    */
     private final static String INPUT_FILE = "inputFaithful.dat";
     private final static String RESULT_FILE = "resultFaithful.dat";
     private final static String RESULT_FILE_FORMATED = "resultFaithful_formated.dat";
     private final static int NUM_CLUSTER = 2;
-    */
+
     private final static int ITERATIONS = 500;
 
     /**
@@ -63,7 +63,7 @@ public class Main {
             }
             printWriterFormated.println("- RealEigenValues: ");
             for (double eigenValue: eD.getRealEigenvalues()) {
-                printWriter.print(" " + 2 * Math.sqrt(4.605 * eigenValue));
+                printWriter.print(" " + eigenValue);
                 printWriterFormated.println("  - " + eigenValue);
             }
             // Get index of max Eigenvalue
@@ -71,13 +71,13 @@ public class Main {
                         .reduce((i, j) -> eD.getRealEigenvalue(i) > eD.getRealEigenvalue(j) ? i : j)
                         .getAsInt();
             RealVector vector = eD.getEigenvector(index);
-            double angle =0.0;
+            double angel =0.0;
             // Only calculate angle on more than one dimensions
             if (vector.getDimension() > 1 ) {
-                angle = Math.toDegrees((Math.acos((vector.getEntry(1) / getMagnitude(vector) / 1))));
+                angel = Math.toDegrees((Math.acos((vector.getEntry(1) / getMagnitude(vector) / 1))));
             }
-            printWriter.println(" " + angle);
-            printWriterFormated.println("- AngleDegree: " + angle);
+            printWriter.println(" " + angel);
+            printWriterFormated.println("- AngleDegree: " + angel);
             printWriterFormated.println("- EigenVectors: ");
             for (int j = 0; j < dataPoints.get(0).getAttributes().getMaxIndex() + 1; j++) {
                 printWriterFormated.println("  - " + eD.getEigenvector(j));

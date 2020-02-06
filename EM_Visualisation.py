@@ -22,7 +22,7 @@ plt.ylabel("y")
 # set from - to value per axis [y-from, y-to, x-from, x-to]
 plt.axis(plt_axis)
 # colorset for ellipse surface 
-colorset = ["gold","mediumseagreen","cornflowerblue","lightblue","peru"]
+colorset = ["goldenrod","mediumseagreen","cornflowerblue","orchid","peru"]
 
 # load dataPoints
 x_axis = []
@@ -37,7 +37,7 @@ with open(dataPoints) as f:
 plt.plot(x_axis, y_axis, "gx")
 
 # load determinted clusters and plot it (ax.add_artist)
-ax = plt.subplot(111)
+ax = plt.subplot(1,1,1)
 with open(clusters) as f:
     for line in f:
         stuff = line.split()
@@ -50,10 +50,20 @@ with open(clusters) as f:
         if  width>height:
             width, height = height, width
             angle = angle * -1
-        e = Ellipse((x, y), width, height, -angle)
-        e.set_color("blue") # border color
-        e.set_alpha(0.5) # alpha value
-        e.set_facecolor(np.random.choice(colorset)) # choose an random facecolor for the ellipse
+        ellipseColor = np.random.choice(colorset) # choose an random facecolor for the ellipse
+        # draw for each cluster 3 ellipse with differnt chi-square probabilities and alpha values 
+        # further information on https://www.visiondummy.com/2014/04/draw-error-ellipse-representing-covariance-matrix/
+        e = Ellipse((x,y), 2 * np.sqrt(1.388 * width), 2 * np.sqrt(1.388 * height), -angle)
+        e.set_alpha(0.8) 
+        e.set_facecolor(ellipseColor)
+        ax.add_artist(e)
+        e = Ellipse((x, y), 2 * np.sqrt(4.605 * width), 2 * np.sqrt(4.605 * height), -angle)
+        e.set_alpha(0.4) 
+        e.set_facecolor(ellipseColor) 
+        ax.add_artist(e)
+        e = Ellipse((x, y), 2 * np.sqrt(9.210 * width), 2 * np.sqrt(9.210 * height), -angle)
+        e.set_alpha(0.1) 
+        e.set_facecolor(ellipseColor)
         ax.add_artist(e)
 
 # show the results
